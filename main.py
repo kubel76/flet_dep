@@ -6,7 +6,7 @@ class SwithThemeButton(ft.ElevatedButton):
         super().__init__()
         self.text = text
         self.bgcolor = ft.colors.ORANGE_300
-        self.color = ft.colors.GREEN_800
+        self.color = ft.colors.BLUE_800
         self.on_click = on_click
 
 
