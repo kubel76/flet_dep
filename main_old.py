@@ -1,5 +1,7 @@
 import flet as ft
+from calor import products_table, dishes_table
 from tinydb import TinyDB, Query
+import re
 
 # Ініціалізація БД
 db = TinyDB("products_and_dash.json")
@@ -13,55 +15,36 @@ def main(page: ft.Page):
 
     def open_edit_dialog(row_data):
         # Функція для відкриття діалогового вікна редагування
-        name_field = ft.TextField(value=row_data['name'], label="Назва продукту")
-        calories_field = ft.TextField(value=row_data['calories'], label="Калорії/100г")
-        proteins_field = ft.TextField(value=row_data['proteins'], label="Білки/100г")
-        fat_field = ft.TextField(value=row_data['fat'], label="Жири/100г")
-        carb_hyd_field = ft.TextField(value=row_data['carb_hyd'], label="Вуглеводи/100г")
-
         def save_changes(e):
-            # Зберігання змін у БД
-            products_table.update({'name': name_field.value, 
-                                   'calories': calories_field.value, 
-                                   'proteins': proteins_field.value, 
-                                   'fat': fat_field.value, 
-                                   'carb_hyd': carb_hyd_field.value}, 
-                                  Query().name == row_data['name'])
-            dialog.open = False
+            # Зберігайте зміни тут
+            print(f"Saving changes for: {row_data['name']}")
+            dialog.close()
             page.update()
-            get_products(e)  # Оновлюємо список продуктів
 
         def delete_product(e):
             # Видалення продукту
-            products_table.remove(Query().name == row_data['name'])
-            dialog.open = False
+            print(f"Deleting product: {row_data['name']}")
+            dialog.close()
             page.update()
-            get_products(e)  # Оновлюємо список продуктів
-
-        def close_dialog(e):
-            dialog.open = False
-            page.update()  # Оновлення сторінки після закриття діалогу
 
         dialog = ft.AlertDialog(
             title=ft.Text(f"Редагування продукту: {row_data['name']}"),
             content=ft.Column([
-                name_field,
-                calories_field,
-                proteins_field,
-                fat_field,
-                carb_hyd_field,
+                ft.TextField(value=row_data['name'], label="Назва продукту"),
+                ft.TextField(value=row_data['calories'], label="Калорії/100г"),
+                ft.TextField(value=row_data['proteins'], label="Білки/100г"),
+                ft.TextField(value=row_data['fat'], label="Жири/100г"),
+                ft.TextField(
+                    value=row_data['carb_hyd'], label="Вуглеводи/100г")
             ]),
             actions=[
                 ft.TextButton("Зберегти", on_click=save_changes),
                 ft.TextButton("Видалити", on_click=delete_product),
-                ft.TextButton("Закрити", on_click=close_dialog)
+                ft.TextButton("Закрити", on_click=lambda e: dialog.close())
             ]
         )
-
-        # Додавання діалогу до overlay сторінки
-        page.overlay.append(dialog)
-        dialog.open = True
-        page.update()
+        page.dialog = dialog
+        dialog.open()
 
     def get_products(e):
         # Очищення контейнера для даних
