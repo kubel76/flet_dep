@@ -7,6 +7,127 @@ products_table = db.table('products')
 dishes_table = db.table('dishes')
 
 
+class AddItemDialog:
+    def __init__(self, table, is_product, page, update_callback):
+        self.table = table
+        self.is_product = is_product  # True для продукту, False для страви
+        self.page = page
+        self.update_callback = update_callback  # Колбек для оновлення списку
+
+        # Поля для введення інформації про продукт або страву
+        self.name_field = ft.TextField(label="Назва продукту" if is_product else "Назва страви")
+
+        # Поля для продукту
+        self.calories_field = ft.TextField(label="Калорії/100г")
+        self.proteins_field = ft.TextField(label="Білки/100г")
+        self.fat_field = ft.TextField(label="Жири/100г")
+        self.carb_hyd_field = ft.TextField(label="Вуглеводи/100г")
+
+        # Якщо це страва, додаємо вибір продуктів
+        if not self.is_product:
+            # Список всіх продуктів для вибору
+            self.products = products_table.all()
+            self.checkboxes = []
+
+            for product in self.products:
+                checkbox = ft.Checkbox(label=product['name'], on_change=self.update_ingredients)
+                self.checkboxes.append(checkbox)
+
+            # Поля для підсумкових значень страви
+            self.total_calories_field = ft.TextField(label="Загальні калорії", disabled=True)
+            self.total_proteins_field = ft.TextField(label="Загальні білки", disabled=True)
+            self.total_fat_field = ft.TextField(label="Загальні жири", disabled=True)
+            self.total_carb_hyd_field = ft.TextField(label="Загальні вуглеводи", disabled=True)
+
+    def update_ingredients(self, e):
+        # Оновлення вибраних продуктів і перерахунок підсумкових значень
+        selected_products = [cb.label for cb in self.checkboxes if cb.value]
+        
+        total_calories = 0
+        total_proteins = 0
+        total_fat = 0
+        total_carb_hyd = 0
+
+        for product_name in selected_products:
+            product = next((p for p in self.products if p['name'] == product_name), None)
+            if product:
+                total_calories += float(product['calories'])
+                total_proteins += float(product['proteins'])
+                total_fat += float(product['fat'])
+                total_carb_hyd += float(product['carb_hyd'])
+
+        # Оновлюємо поля
+        self.total_calories_field.value = str(total_calories)
+        self.total_proteins_field.value = str(total_proteins)
+        self.total_fat_field.value = str(total_fat)
+        self.total_carb_hyd_field.value = str(total_carb_hyd)
+
+        self.page.update()
+
+    def open(self):
+        def save_item(e):
+            if self.is_product:
+                # Збереження нового продукту
+                new_product = {
+                    'name': self.name_field.value,
+                    'calories': self.calories_field.value,
+                    'proteins': self.proteins_field.value,
+                    'fat': self.fat_field.value,
+                    'carb_hyd': self.carb_hyd_field.value
+                }
+                self.table.insert(new_product)
+            else:
+                # Збереження нової страви
+                selected_products = [cb.label for cb in self.checkboxes if cb.value]
+                new_dish = {
+                    'name_dash': self.name_field.value,
+                    'total_calories': self.total_calories_field.value,
+                    'total_proteins': self.total_proteins_field.value,
+                    'total_fat': self.total_fat_field.value,
+                    'total_carb_hyd': self.total_carb_hyd_field.value,
+                    'products': selected_products
+                }
+                self.table.insert(new_dish)
+
+            dialog.open = False
+            self.update_callback()  # Оновлення списку
+            self.page.update()
+
+        def close_dialog(e):
+            dialog.open = False
+            self.page.update()
+
+        content_fields = [
+            self.name_field,
+            self.calories_field,
+            self.proteins_field,
+            self.fat_field,
+            self.carb_hyd_field
+        ] if self.is_product else [
+            self.name_field,
+            ft.Text("Виберіть інгредієнти для страви"),
+            *self.checkboxes,
+            self.total_calories_field,
+            self.total_proteins_field,
+            self.total_fat_field,
+            self.total_carb_hyd_field
+        ]
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("Додати продукт" if self.is_product else "Додати страву"),
+            content=ft.Column(content_fields),
+            actions=[
+                ft.TextButton("Зберегти", on_click=save_item),
+                ft.TextButton("Закрити", on_click=close_dialog)
+            ]
+        )
+
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+
+
+
 class EditDialog:
     def __init__(self, table, row_data, is_product, page, update_callback):
         self.table = table
@@ -53,7 +174,31 @@ class EditDialog:
 
     def update_ingredients(self, e):
         # Оновлення вибраних продуктів
-        self.selected_products = [cb.label for cb in self.checkboxes if cb.value]
+        self.selected_products = [
+            cb.label for cb in self.checkboxes if cb.value]
+
+        # Перерахунок калорій, білків, жирів та вуглеводів
+        total_calories = 0
+        total_proteins = 0
+        total_fat = 0
+        total_carb_hyd = 0
+
+        for product_name in self.selected_products:
+            product = next(
+                (p for p in self.products if p['name'] == product_name), None)
+            if product:
+                total_calories += float(product['calories'])
+                total_proteins += float(product['proteins'])
+                total_fat += float(product['fat'])
+                total_carb_hyd += float(product['carb_hyd'])
+
+        # Оновлення полів з перерахованими значеннями
+        self.calories_field.value = str(total_calories)
+        self.proteins_field.value = str(total_proteins)
+        self.fat_field.value = str(total_fat)
+        self.carb_hyd_field.value = str(total_carb_hyd)
+
+        # Оновлення сторінки
         self.page.update()
 
     def open(self):
@@ -83,7 +228,8 @@ class EditDialog:
             if self.is_product:
                 self.table.remove(Query().name == self.row_data['name'])
             else:
-                self.table.remove(Query().name_dash == self.row_data['name_dash'])
+                self.table.remove(Query().name_dash ==
+                                  self.row_data['name_dash'])
             dialog.open = False
             self.update_callback()  # Виклик функції оновлення списку
             self.page.update()
@@ -228,11 +374,19 @@ def main(page: ft.Page):
         # Оновлення сторінки
         page.update()
 
+    def add_product_dialog(e):
+        AddItemDialog(products_table, True, page, update_products).open()
+
+    def add_dish_dialog(e):
+        AddItemDialog(dishes_table, False, page, update_dishes).open()
+
     # Додавання кнопок і контейнера на сторінку
     page.add(ft.Column([
         ft.Row([
             ft.ElevatedButton('Список продуктів', on_click=get_products),
-            ft.ElevatedButton('Список страв', on_click=get_dishes)
+            ft.ElevatedButton('Додати продукт', on_click=add_product_dialog),
+            ft.ElevatedButton('Список страв', on_click=get_dishes),
+            ft.ElevatedButton('Додати страву', on_click=add_dish_dialog),
         ]),
         data_container
     ]))
