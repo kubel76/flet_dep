@@ -3,8 +3,23 @@ import flet as ft
 import models
 import controller
 
+table_settings = {
+    "bgcolor": "yellow",
+    "border": ft.border.all(2, "red"),
+    "border_radius": 10,
+    "vertical_lines": ft.BorderSide(3, "blue"),
+    "horizontal_lines": ft.BorderSide(1, "green"),
+    "sort_column_index": 0,
+    "sort_ascending": True,
+    "heading_row_color": ft.colors.BLACK12,
+    "data_row_color": {ft.ControlState.HOVERED: "0x30FF0000"},
+    "divider_thickness": 0
+}
+
 
 def get_products(page):
+    search_field = ft.TextField(label='Назва продукту')
+    success_message = ft.Text("", color="green")
     # Отримання продуктів з бази
     products = models.products_table.all()
 
@@ -42,9 +57,9 @@ def get_products(page):
                         "Видалити",
                         on_click=lambda e, row_data=row: models.delete_product(
                             page, row_data)
-                    )
+                    ),
                 ])),
-            ]
+            ],
         )
         for row in products
     ]
@@ -59,12 +74,31 @@ def get_products(page):
                               on_click=lambda e: add_product_view(page)),
         ]),
         ft.Column([
-            ft.Text('Продукти в базі', size=18),
+            ft.Row([
+                ft.Text('Продукти в базі', size=18),
+                search_field,
+                # ft.ElevatedButton("Пошук", on_click=lambda e: print(
+                #     f'Шукаємо {search_field.value}'))
+                ft.ElevatedButton("Пошук", on_click=lambda e: [
+                                  # Виводимо повідомлення про успішне додавання
+                                  setattr(success_message, 'value',
+                                          f"Колись ми тут знайдемо продукт {search_field.value}"),
+                                  # Очищуємо всі поля
+                                  setattr(search_field, 'value', ""),
+                                  page.update(),
+                                  ]
+                                  ),
+                success_message
+            ]),
             ft.Divider(),
             # Додаємо прокрутку до таблиці через ft.Column з параметром scroll
             ft.Column(
                 [
-                    ft.DataTable(columns=columns, rows=rows),
+                    ft.DataTable(
+                        **table_settings,
+                        columns=columns,
+                        rows=rows,
+                    ),
                 ],
                 height=400,  # Встановлюємо висоту контейнера
                 scroll="auto"  # Додаємо прокрутку
@@ -73,7 +107,6 @@ def get_products(page):
         ]),
     )
     page.update()
-
 
 
 def get_dishes(page):
@@ -122,7 +155,7 @@ def get_dishes(page):
         ft.Column([
             ft.Text('Страви в базі', size=18),
             ft.Divider(),
-            ft.DataTable(columns=columns, rows=rows),
+            ft.DataTable(**table_settings, columns=columns, rows=rows),
             ft.Divider(),
         ])
     )
@@ -167,7 +200,8 @@ def add_product_view(page):
                         carb_hyd=float(carb_hyd_field.value),
                     ),
                     # Виводимо повідомлення про успішне додавання
-                    setattr(success_message, 'value', f"Продукт {name_field.value} успішно додано!"),
+                    setattr(success_message, 'value',
+                            f"Продукт {name_field.value} успішно додано!"),
                     # Очищуємо всі поля
                     setattr(name_field, 'value', ""),
                     setattr(calories_field, 'value', ""),
@@ -182,6 +216,3 @@ def add_product_view(page):
         ]),
     )
     page.update()
-
-
-
